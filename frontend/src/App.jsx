@@ -11,7 +11,7 @@ function App() {
 
   // Fetch users
   const fetchUsers = async () => {
-    const res = await fetch("http://localhost:5000/users");
+    const res = await fetch("https://birthday-app-da8m.onrender.com/users");
     const data = await res.json();
     setUsers(data);
   };
@@ -23,7 +23,7 @@ function App() {
   const submit = async (e) => {
     e.preventDefault();
 
-    const res = await fetch("http://localhost:5000/users", {
+    const res = await fetch("https://birthday-app-da8m.onrender.com/users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
