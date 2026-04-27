@@ -35,7 +35,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Check email config
 transporter.verify((error) => {
   if (error) {
     console.log("Email config error:", error);
@@ -64,6 +63,13 @@ app.post("/users", (req, res) => {
 app.get("/users", (req, res) => {
   const users = getUsers();
   res.json(users);
+});
+
+// UPDATE users (for edit/delete)
+app.put("/users/update", (req, res) => {
+  const { users } = req.body;
+  saveUsers(users);
+  res.json({ message: "Users updated" });
 });
 
 // ================= CRON JOB =================
@@ -113,14 +119,8 @@ cron.schedule("* * * * *", () => {
 });
 
 // ================= SERVE FRONTEND =================
-// ================= SERVE FRONTEND =================
 app.use(express.static(path.join(__dirname, "frontend/dist")));
 
-app.use((req, res) => {
-  res.sendFile(path.join(__dirname, "frontend/dist/index.html"));
-});
-
-// Catch-all for React (IMPORTANT)
 app.use((req, res) => {
   res.sendFile(path.join(__dirname, "frontend/dist/index.html"));
 });

@@ -8,9 +8,13 @@ function App() {
   });
 
   const [users, setUsers] = useState([]);
+  const [search, setSearch] = useState("");
+  const [editingIndex, setEditingIndex] = useState(null);
+
+  const API = "https://birthday-app-da8m.onrender.com/users";
 
   const fetchUsers = async () => {
-    const res = await fetch("https://birthday-app-da8m.onrender.com/users");
+    const res = await fetch(API);
     const data = await res.json();
     setUsers(data);
   };
@@ -22,27 +26,78 @@ function App() {
   const submit = async (e) => {
     e.preventDefault();
 
-    const res = await fetch("https://birthday-app-da8m.onrender.com/users", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
+    if (editingIndex !== null) {
+      // UPDATE
+      const updated = [...users];
+      updated[editingIndex] = form;
 
-    const data = await res.json();
-    alert(data.message);
+      await fetch(API + "/update", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ users: updated }),
+      });
+
+      setEditingIndex(null);
+    } else {
+      // CREATE
+      await fetch(API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+    }
 
     setForm({ username: "", email: "", dob: "" });
     fetchUsers();
   };
 
+  const deleteUser = async (index) => {
+    const updated = users.filter((_, i) => i !== index);
+
+    await fetch(API + "/update", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ users: updated }),
+    });
+
+    fetchUsers();
+  };
+
+  const editUser = (user, index) => {
+    setForm(user);
+    setEditingIndex(index);
+  };
+
+  const getCountdown = (dob) => {
+    const today = new Date();
+    const birth = new Date(dob);
+
+    let next = new Date(today.getFullYear(), birth.getMonth(), birth.getDate());
+    if (next < today) next.setFullYear(today.getFullYear() + 1);
+
+    const diff = Math.ceil((next - today) / (1000 * 60 * 60 * 24));
+    return diff === 0 ? "🎉 Today!" : `${diff} days`;
+  };
+
+  const filteredUsers = users.filter((u) =>
+    u.username.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div style={containerStyle}>
-      
       <h1 style={titleStyle}>🎉 Birthday Reminder</h1>
+
+      {/* SEARCH */}
+      <input
+        placeholder="🔍 Search user..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        style={inputStyle}
+      />
 
       {/* FORM */}
       <form onSubmit={submit} style={cardStyle}>
-        <h3 style={subtitleStyle}>Add New Birthday</h3>
+        <h3>{editingIndex !== null ? "Edit User" : "Add User"}</h3>
 
         <input
           placeholder="Username"
@@ -75,91 +130,65 @@ function App() {
           }
         />
 
-        <button style={buttonStyle}>Save 🎉</button>
+        <button style={buttonStyle}>
+          {editingIndex !== null ? "Update ✏️" : "Save 🎉"}
+        </button>
       </form>
 
-      {/* USER LIST */}
+      {/* USERS */}
       <div style={cardStyle}>
-        <h3 style={subtitleStyle}>📋 Saved Users</h3>
+        <h3>📋 Users</h3>
 
-        {users.length === 0 ? (
-          <p style={{ textAlign: "center", color: "#777" }}>
-            No users yet
-          </p>
-        ) : (
-          users.map((u, index) => (
-            <div key={index} style={userItemStyle}>
-              <strong>{u.username}</strong>
-              <p style={{ margin: "5px 0", color: "#555" }}>{u.email}</p>
-              <small style={{ color: "#999" }}>
-                DOB: {u.dob}
-              </small>
+        {filteredUsers.map((u, index) => (
+          <div key={index} style={userItemStyle}>
+            <strong>{u.username}</strong>
+            <p>{u.email}</p>
+            <small>DOB: {u.dob}</small>
+            <br />
+            <small>⏳ {getCountdown(u.dob)}</small>
+
+            <div style={{ marginTop: "10px" }}>
+              <button onClick={() => editUser(u, index)} style={editBtn}>
+                Edit
+              </button>
+              <button onClick={() => deleteUser(index)} style={deleteBtn}>
+                Delete
+              </button>
             </div>
-          ))
-        )}
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-// ================= STYLES =================
-
-const containerStyle = {
-  minHeight: "100vh",
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  background: "linear-gradient(135deg, #667eea, #764ba2)",
-  fontFamily: "Arial, sans-serif",
-  padding: "20px"
-};
-
-const titleStyle = {
-  color: "white",
-  marginBottom: "20px",
-  textAlign: "center"
-};
-
-const subtitleStyle = {
-  marginBottom: "15px",
-  color: "#333"
-};
-
+// ===== STYLES =====
+const containerStyle = { padding: 20, textAlign: "center" };
+const titleStyle = { color: "#333" };
 const cardStyle = {
   background: "white",
-  padding: "25px",
-  borderRadius: "16px",
-  width: "100%",
-  maxWidth: "400px",
-  marginBottom: "20px",
-  boxShadow: "0 8px 20px rgba(0,0,0,0.15)"
+  padding: 20,
+  margin: "10px auto",
+  maxWidth: 400,
+  borderRadius: 10,
 };
-
 const inputStyle = {
   width: "100%",
-  padding: "12px",
-  marginBottom: "12px",
-  borderRadius: "10px",
-  border: "1px solid #ddd",
-  fontSize: "14px",
-  outline: "none"
+  padding: 10,
+  marginBottom: 10,
 };
-
 const buttonStyle = {
   width: "100%",
-  padding: "12px",
-  borderRadius: "10px",
-  border: "none",
-  background: "linear-gradient(135deg, #667eea, #764ba2)",
+  padding: 10,
+  background: "#667eea",
   color: "white",
-  fontWeight: "bold",
-  cursor: "pointer",
-  transition: "0.3s"
+  border: "none",
 };
-
 const userItemStyle = {
   borderBottom: "1px solid #eee",
-  padding: "12px 0"
+  padding: 10,
 };
+const editBtn = { marginRight: 10 };
+const deleteBtn = { background: "red", color: "white" };
 
 export default App;
