@@ -32,37 +32,21 @@ function App() {
     const data = await res.json();
     alert(data.message);
 
-    fetchUsers(); // refresh list
+    setForm({ username: "", email: "", dob: "" }); // clear form
+    fetchUsers();
   };
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      background: "linear-gradient(135deg, #667eea, #764ba2)",
-      fontFamily: "Arial",
-      padding: "20px"
-    }}>
+    <div style={containerStyle}>
       
       {/* FORM */}
-      <form
-        onSubmit={submit}
-        style={{
-          background: "white",
-          padding: "20px",
-          borderRadius: "15px",
-          width: "320px",
-          marginBottom: "30px",
-          boxShadow: "0 10px 25px rgba(0,0,0,0.2)"
-        }}
-      >
-        <h2 style={{ textAlign: "center" }}>🎂 Add Birthday</h2>
+      <form onSubmit={submit} style={cardStyle}>
+        <h2 style={{ textAlign: "center" }}>🎂 Birthday Reminder</h2>
 
         <input
           placeholder="Username"
           required
+          value={form.username}
           style={inputStyle}
           onChange={(e) =>
             setForm({ ...form, username: e.target.value })
@@ -73,6 +57,7 @@ function App() {
           placeholder="Email"
           type="email"
           required
+          value={form.email}
           style={inputStyle}
           onChange={(e) =>
             setForm({ ...form, email: e.target.value })
@@ -82,6 +67,7 @@ function App() {
         <input
           type="date"
           required
+          value={form.dob}
           style={inputStyle}
           onChange={(e) =>
             setForm({ ...form, dob: e.target.value })
@@ -92,23 +78,14 @@ function App() {
       </form>
 
       {/* USER LIST */}
-      <div style={{
-        background: "white",
-        padding: "20px",
-        borderRadius: "15px",
-        width: "320px",
-        boxShadow: "0 10px 25px rgba(0,0,0,0.2)"
-      }}>
+      <div style={cardStyle}>
         <h3>📋 Saved Users</h3>
 
         {users.length === 0 ? (
           <p>No users yet</p>
         ) : (
           users.map((u, index) => (
-            <div key={index} style={{
-              borderBottom: "1px solid #eee",
-              padding: "10px 0"
-            }}>
+            <div key={index} style={userItemStyle}>
               <strong>{u.username}</strong><br />
               <small>{u.email}</small><br />
               <small>DOB: {u.dob}</small>
@@ -119,6 +96,28 @@ function App() {
     </div>
   );
 }
+
+// ================= STYLES =================
+
+const containerStyle = {
+  minHeight: "100vh",
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  background: "linear-gradient(135deg, #667eea, #764ba2)",
+  fontFamily: "Arial",
+  padding: "20px"
+};
+
+const cardStyle = {
+  background: "white",
+  padding: "20px",
+  borderRadius: "15px",
+  width: "100%",
+  maxWidth: "400px",
+  marginBottom: "20px",
+  boxShadow: "0 10px 25px rgba(0,0,0,0.2)"
+};
 
 const inputStyle = {
   width: "100%",
@@ -137,6 +136,11 @@ const buttonStyle = {
   color: "white",
   fontWeight: "bold",
   cursor: "pointer"
+};
+
+const userItemStyle = {
+  borderBottom: "1px solid #eee",
+  padding: "10px 0"
 };
 
 export default App;
