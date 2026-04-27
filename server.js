@@ -4,6 +4,7 @@ const cors = require("cors");
 const nodemailer = require("nodemailer");
 const cron = require("node-cron");
 const fs = require("fs");
+const path = require("path");
 
 const app = express();
 app.use(cors());
@@ -34,8 +35,8 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// ✅ Check email config on startup
-transporter.verify((error, success) => {
+// Check email config
+transporter.verify((error) => {
   if (error) {
     console.log("Email config error:", error);
   } else {
@@ -76,8 +77,6 @@ cron.schedule("* * * * *", () => {
   const users = getUsers();
 
   users.forEach((user) => {
-    console.log("Checking user:", user.email);
-
     const dob = new Date(user.dob);
     const todayKey = `${month}-${date}`;
 
@@ -111,6 +110,14 @@ cron.schedule("* * * * *", () => {
       );
     }
   });
+});
+
+// ================= SERVE FRONTEND =================
+app.use(express.static(path.join(__dirname, "frontend/dist")));
+
+// Catch-all for React (IMPORTANT)
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "frontend/dist/index.html"));
 });
 
 // ================= START SERVER =================
