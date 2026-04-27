@@ -113,10 +113,15 @@ cron.schedule("* * * * *", () => {
 });
 
 // ================= SERVE FRONTEND =================
+// ================= SERVE FRONTEND =================
 app.use(express.static(path.join(__dirname, "frontend/dist")));
 
+app.use((req, res) => {
+  res.sendFile(path.join(__dirname, "frontend/dist/index.html"));
+});
+
 // Catch-all for React (IMPORTANT)
-app.get("/*", (req, res) => {
+app.use((req, res) => {
   res.sendFile(path.join(__dirname, "frontend/dist/index.html"));
 });
 
