@@ -9,7 +9,6 @@ function App() {
 
   const [users, setUsers] = useState([]);
 
-  // Fetch users
   const fetchUsers = async () => {
     const res = await fetch("https://birthday-app-da8m.onrender.com/users");
     const data = await res.json();
@@ -32,16 +31,18 @@ function App() {
     const data = await res.json();
     alert(data.message);
 
-    setForm({ username: "", email: "", dob: "" }); // clear form
+    setForm({ username: "", email: "", dob: "" });
     fetchUsers();
   };
 
   return (
     <div style={containerStyle}>
       
+      <h1 style={titleStyle}>🎉 Birthday Reminder</h1>
+
       {/* FORM */}
       <form onSubmit={submit} style={cardStyle}>
-        <h2 style={{ textAlign: "center" }}>🎂 Birthday Reminder</h2>
+        <h3 style={subtitleStyle}>Add New Birthday</h3>
 
         <input
           placeholder="Username"
@@ -79,16 +80,20 @@ function App() {
 
       {/* USER LIST */}
       <div style={cardStyle}>
-        <h3>📋 Saved Users</h3>
+        <h3 style={subtitleStyle}>📋 Saved Users</h3>
 
         {users.length === 0 ? (
-          <p>No users yet</p>
+          <p style={{ textAlign: "center", color: "#777" }}>
+            No users yet
+          </p>
         ) : (
           users.map((u, index) => (
             <div key={index} style={userItemStyle}>
-              <strong>{u.username}</strong><br />
-              <small>{u.email}</small><br />
-              <small>DOB: {u.dob}</small>
+              <strong>{u.username}</strong>
+              <p style={{ margin: "5px 0", color: "#555" }}>{u.email}</p>
+              <small style={{ color: "#999" }}>
+                DOB: {u.dob}
+              </small>
             </div>
           ))
         )}
@@ -105,42 +110,56 @@ const containerStyle = {
   flexDirection: "column",
   alignItems: "center",
   background: "linear-gradient(135deg, #667eea, #764ba2)",
-  fontFamily: "Arial",
+  fontFamily: "Arial, sans-serif",
   padding: "20px"
+};
+
+const titleStyle = {
+  color: "white",
+  marginBottom: "20px",
+  textAlign: "center"
+};
+
+const subtitleStyle = {
+  marginBottom: "15px",
+  color: "#333"
 };
 
 const cardStyle = {
   background: "white",
-  padding: "20px",
-  borderRadius: "15px",
+  padding: "25px",
+  borderRadius: "16px",
   width: "100%",
   maxWidth: "400px",
   marginBottom: "20px",
-  boxShadow: "0 10px 25px rgba(0,0,0,0.2)"
+  boxShadow: "0 8px 20px rgba(0,0,0,0.15)"
 };
 
 const inputStyle = {
   width: "100%",
-  padding: "10px",
-  marginBottom: "10px",
-  borderRadius: "8px",
-  border: "1px solid #ccc"
+  padding: "12px",
+  marginBottom: "12px",
+  borderRadius: "10px",
+  border: "1px solid #ddd",
+  fontSize: "14px",
+  outline: "none"
 };
 
 const buttonStyle = {
   width: "100%",
-  padding: "10px",
-  borderRadius: "8px",
+  padding: "12px",
+  borderRadius: "10px",
   border: "none",
-  background: "#667eea",
+  background: "linear-gradient(135deg, #667eea, #764ba2)",
   color: "white",
   fontWeight: "bold",
-  cursor: "pointer"
+  cursor: "pointer",
+  transition: "0.3s"
 };
 
 const userItemStyle = {
   borderBottom: "1px solid #eee",
-  padding: "10px 0"
+  padding: "12px 0"
 };
 
 export default App;
