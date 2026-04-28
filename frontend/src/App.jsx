@@ -9,7 +9,7 @@ function App() {
 
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState("");
-  const [editingIndex, setEditingIndex] = useState(null);
+  const [editingId, setEditingId] = useState(null);
 
   const API = "https://birthday-app-da8m.onrender.com/users";
 
@@ -26,18 +26,15 @@ function App() {
   const submit = async (e) => {
     e.preventDefault();
 
-    if (editingIndex !== null) {
+    if (editingId) {
       // UPDATE
-      const updated = [...users];
-      updated[editingIndex] = form;
-
-      await fetch(API + "/update", {
+      await fetch(`${API}/${editingId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ users: updated }),
+        body: JSON.stringify(form),
       });
 
-      setEditingIndex(null);
+      setEditingId(null);
     } else {
       // CREATE
       await fetch(API, {
@@ -51,21 +48,21 @@ function App() {
     fetchUsers();
   };
 
-  const deleteUser = async (index) => {
-    const updated = users.filter((_, i) => i !== index);
-
-    await fetch(API + "/update", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ users: updated }),
+  const deleteUser = async (id) => {
+    await fetch(`${API}/${id}`, {
+      method: "DELETE",
     });
 
     fetchUsers();
   };
 
-  const editUser = (user, index) => {
-    setForm(user);
-    setEditingIndex(index);
+  const editUser = (user) => {
+    setForm({
+      username: user.username,
+      email: user.email,
+      dob: user.dob,
+    });
+    setEditingId(user._id);
   };
 
   const getCountdown = (dob) => {
@@ -87,7 +84,6 @@ function App() {
     <div style={containerStyle}>
       <h1 style={titleStyle}>🎉 Birthday Reminder</h1>
 
-      {/* SEARCH */}
       <input
         placeholder="🔍 Search user..."
         value={search}
@@ -95,9 +91,8 @@ function App() {
         style={inputStyle}
       />
 
-      {/* FORM */}
       <form onSubmit={submit} style={cardStyle}>
-        <h3>{editingIndex !== null ? "Edit User" : "Add User"}</h3>
+        <h3>{editingId ? "Edit User" : "Add User"}</h3>
 
         <input
           placeholder="Username"
@@ -131,16 +126,15 @@ function App() {
         />
 
         <button style={buttonStyle}>
-          {editingIndex !== null ? "Update ✏️" : "Save 🎉"}
+          {editingId ? "Update ✏️" : "Save 🎉"}
         </button>
       </form>
 
-      {/* USERS */}
       <div style={cardStyle}>
         <h3>📋 Users</h3>
 
-        {filteredUsers.map((u, index) => (
-          <div key={index} style={userItemStyle}>
+        {filteredUsers.map((u) => (
+          <div key={u._id} style={userItemStyle}>
             <strong>{u.username}</strong>
             <p>{u.email}</p>
             <small>DOB: {u.dob}</small>
@@ -148,10 +142,10 @@ function App() {
             <small>⏳ {getCountdown(u.dob)}</small>
 
             <div style={{ marginTop: "10px" }}>
-              <button onClick={() => editUser(u, index)} style={editBtn}>
+              <button onClick={() => editUser(u)} style={editBtn}>
                 Edit
               </button>
-              <button onClick={() => deleteUser(index)} style={deleteBtn}>
+              <button onClick={() => deleteUser(u._id)} style={deleteBtn}>
                 Delete
               </button>
             </div>

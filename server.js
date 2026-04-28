@@ -1,28 +1,29 @@
 const express = require("express");
-const bodyParser = require("body-parser");
 const cors = require("cors");
 const nodemailer = require("nodemailer");
 const cron = require("node-cron");
-const fs = require("fs");
+const mongoose = require("mongoose");
 const path = require("path");
+require("dotenv").config();
 
 const app = express();
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json());
 
-// ================= FILE DATABASE =================
-const getUsers = () => {
-  if (!fs.existsSync("data.json")) {
-    fs.writeFileSync("data.json", "[]");
-  }
+// ================= MONGODB =================
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("MongoDB connected ✅"))
+  .catch((err) => console.log("MongoDB error ❌", err));
 
-  const data = fs.readFileSync("data.json");
-  return JSON.parse(data);
-};
+// ================= MODEL =================
+const userSchema = new mongoose.Schema({
+  username: String,
+  email: { type: String, unique: true },
+  dob: String,
+  lastSent: String,
+});
 
-const saveUsers = (users) => {
-  fs.writeFileSync("data.json", JSON.stringify(users, null, 2));
-};
+const User = mongoose.model("User", userSchema);
 
 // ================= EMAIL SETUP =================
 const transporter = nodemailer.createTransport({
@@ -44,50 +45,57 @@ transporter.verify((error) => {
 });
 
 // ================= API =================
-app.post("/users", (req, res) => {
-  const { username, email, dob } = req.body;
 
-  const users = getUsers();
+// CREATE USER
+app.post("/users", async (req, res) => {
+  try {
+    const { username, email, dob } = req.body;
 
-  const exists = users.find((u) => u.email === email);
-  if (exists) {
-    return res.status(400).json({ message: "Email already exists" });
+    const exists = await User.findOne({ email });
+    if (exists) {
+      return res.status(400).json({ message: "Email already exists" });
+    }
+
+    await User.create({ username, email, dob });
+
+    res.json({ message: "User saved!" });
+  } catch (err) {
+    res.status(500).json({ message: "Error saving user" });
   }
-
-  users.push({ username, email, dob });
-  saveUsers(users);
-
-  res.json({ message: "User saved!" });
 });
 
-app.get("/users", (req, res) => {
-  const users = getUsers();
+// GET USERS
+app.get("/users", async (req, res) => {
+  const users = await User.find();
   res.json(users);
 });
 
-// UPDATE users (for edit/delete)
-app.put("/users/update", (req, res) => {
+// UPDATE USERS (for edit/delete)
+app.put("/users/update", async (req, res) => {
   const { users } = req.body;
-  saveUsers(users);
+
+  await User.deleteMany({});
+  await User.insertMany(users);
+
   res.json({ message: "Users updated" });
 });
 
 // ================= CRON JOB =================
-cron.schedule("* * * * *", () => {
+cron.schedule("* * * * *", async () => {
   console.log("Cron running...");
 
   const today = new Date();
   const month = today.getMonth();
   const date = today.getDate();
 
-  const users = getUsers();
+  const users = await User.find();
 
-  users.forEach((user) => {
+  for (let user of users) {
     const dob = new Date(user.dob);
     const todayKey = `${month}-${date}`;
 
     if (dob.getMonth() === month && dob.getDate() === date) {
-      if (user.lastSent === todayKey) return;
+      if (user.lastSent === todayKey) continue;
 
       console.log("Birthday match!");
 
@@ -103,19 +111,19 @@ cron.schedule("* * * * *", () => {
             </div>
           `,
         },
-        (err, info) => {
+        async (err, info) => {
           if (err) {
             console.log("ERROR:", err);
           } else {
             console.log("Email sent:", info.response);
 
             user.lastSent = todayKey;
-            saveUsers(users);
+            await user.save();
           }
         }
       );
     }
-  });
+  }
 });
 
 // ================= SERVE FRONTEND =================
