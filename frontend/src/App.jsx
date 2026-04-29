@@ -13,58 +13,75 @@ function App() {
 
   const API = "https://birthday-app-da8m.onrender.com/users";
 
+  // FETCH USERS
   const fetchUsers = async () => {
-    const res = await fetch(API);
-    const data = await res.json();
-    setUsers(data);
+    try {
+      const res = await fetch(API);
+      const data = await res.json();
+      setUsers(data);
+    } catch (err) {
+      console.error("Error fetching users:", err);
+    }
   };
 
   useEffect(() => {
     fetchUsers();
   }, []);
 
+  // SUBMIT (CREATE + UPDATE)
   const submit = async (e) => {
     e.preventDefault();
 
-    if (editingId) {
-      // UPDATE
-      await fetch(`${API}/${editingId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
+    try {
+      if (editingId) {
+        // UPDATE
+        await fetch(`${API}/${editingId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
+      } else {
+        // CREATE
+        await fetch(API, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
+      }
 
+      setForm({ username: "", email: "", dob: "" });
       setEditingId(null);
-    } else {
-      // CREATE
-      await fetch(API, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
+      fetchUsers();
+    } catch (err) {
+      console.error("Error saving user:", err);
     }
-
-    setForm({ username: "", email: "", dob: "" });
-    fetchUsers();
   };
 
+  // DELETE
   const deleteUser = async (id) => {
-    await fetch(`${API}/${id}`, {
-      method: "DELETE",
-    });
+    try {
+      await fetch(`${API}/${id}`, {
+        method: "DELETE",
+      });
 
-    fetchUsers();
+      fetchUsers();
+    } catch (err) {
+      console.error("Error deleting user:", err);
+    }
   };
 
+  // EDIT
   const editUser = (user) => {
     setForm({
       username: user.username,
       email: user.email,
       dob: user.dob,
     });
+
     setEditingId(user._id);
   };
 
+  // COUNTDOWN
   const getCountdown = (dob) => {
     const today = new Date();
     const birth = new Date(dob);
@@ -76,6 +93,7 @@ function App() {
     return diff === 0 ? "🎉 Today!" : `${diff} days`;
   };
 
+  // FILTER
   const filteredUsers = users.filter((u) =>
     u.username.toLowerCase().includes(search.toLowerCase())
   );
@@ -84,6 +102,7 @@ function App() {
     <div style={containerStyle}>
       <h1 style={titleStyle}>🎉 Birthday Reminder</h1>
 
+      {/* SEARCH */}
       <input
         placeholder="🔍 Search user..."
         value={search}
@@ -91,6 +110,7 @@ function App() {
         style={inputStyle}
       />
 
+      {/* FORM */}
       <form onSubmit={submit} style={cardStyle}>
         <h3>{editingId ? "Edit User" : "Add User"}</h3>
 
@@ -130,27 +150,32 @@ function App() {
         </button>
       </form>
 
+      {/* USERS */}
       <div style={cardStyle}>
         <h3>📋 Users</h3>
 
-        {filteredUsers.map((u) => (
-          <div key={u._id} style={userItemStyle}>
-            <strong>{u.username}</strong>
-            <p>{u.email}</p>
-            <small>DOB: {u.dob}</small>
-            <br />
-            <small>⏳ {getCountdown(u.dob)}</small>
+        {filteredUsers.length === 0 ? (
+          <p>No users found</p>
+        ) : (
+          filteredUsers.map((u) => (
+            <div key={u._id} style={userItemStyle}>
+              <strong>{u.username}</strong>
+              <p>{u.email}</p>
+              <small>DOB: {u.dob}</small>
+              <br />
+              <small>⏳ {getCountdown(u.dob)}</small>
 
-            <div style={{ marginTop: "10px" }}>
-              <button onClick={() => editUser(u)} style={editBtn}>
-                Edit
-              </button>
-              <button onClick={() => deleteUser(u._id)} style={deleteBtn}>
-                Delete
-              </button>
+              <div style={{ marginTop: "10px" }}>
+                <button onClick={() => editUser(u)} style={editBtn}>
+                  Edit
+                </button>
+                <button onClick={() => deleteUser(u._id)} style={deleteBtn}>
+                  Delete
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );
@@ -177,12 +202,19 @@ const buttonStyle = {
   background: "#667eea",
   color: "white",
   border: "none",
+  cursor: "pointer",
 };
 const userItemStyle = {
   borderBottom: "1px solid #eee",
   padding: 10,
 };
 const editBtn = { marginRight: 10 };
-const deleteBtn = { background: "red", color: "white" };
+const deleteBtn = {
+  background: "red",
+  color: "white",
+  border: "none",
+  padding: "5px 10px",
+  cursor: "pointer",
+};
 
 export default App;

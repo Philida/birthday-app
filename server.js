@@ -70,14 +70,34 @@ app.get("/users", async (req, res) => {
   res.json(users);
 });
 
-// UPDATE USERS (for edit/delete)
-app.put("/users/update", async (req, res) => {
-  const { users } = req.body;
+// ❌ REMOVE THIS OLD ROUTE (IMPORTANT)
+// app.put("/users/update", ...)
 
-  await User.deleteMany({});
-  await User.insertMany(users);
+// ✅ UPDATE SINGLE USER (FIXED EDIT SYSTEM)
+app.put("/users/:id", async (req, res) => {
+  try {
+    const { username, email, dob } = req.body;
 
-  res.json({ message: "Users updated" });
+    await User.findByIdAndUpdate(req.params.id, {
+      username,
+      email,
+      dob,
+    });
+
+    res.json({ message: "User updated" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ DELETE USER (FIXED)
+app.delete("/users/:id", async (req, res) => {
+  try {
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ message: "User deleted" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ================= CRON JOB =================
@@ -129,7 +149,7 @@ cron.schedule("* * * * *", async () => {
 // ================= SERVE FRONTEND =================
 app.use(express.static(path.join(__dirname, "frontend/dist")));
 
-app.use((req, res) => {
+app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "frontend/dist/index.html"));
 });
 
