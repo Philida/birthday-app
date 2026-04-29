@@ -10,17 +10,23 @@ function App() {
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const API = "https://birthday-app-da8m.onrender.com/users";
 
   // FETCH USERS
   const fetchUsers = async () => {
     try {
+      setLoading(true);
+
       const res = await fetch(API);
       const data = await res.json();
+
       setUsers(data);
     } catch (err) {
-      console.error("Error fetching users:", err);
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -28,20 +34,18 @@ function App() {
     fetchUsers();
   }, []);
 
-  // SUBMIT (CREATE + UPDATE)
+  // SUBMIT
   const submit = async (e) => {
     e.preventDefault();
 
     try {
       if (editingId) {
-        // UPDATE
         await fetch(`${API}/${editingId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(form),
         });
       } else {
-        // CREATE
         await fetch(API, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -49,9 +53,9 @@ function App() {
         });
       }
 
-      setForm({ username: "", email: "", dob: "" });
       setEditingId(null);
-      fetchUsers();
+      await fetchUsers(); // 👈 wait before clearing form
+      setForm({ username: "", email: "", dob: "" });
     } catch (err) {
       console.error("Error saving user:", err);
     }
@@ -93,10 +97,14 @@ function App() {
     return diff === 0 ? "🎉 Today!" : `${diff} days`;
   };
 
-  // FILTER
   const filteredUsers = users.filter((u) =>
     u.username.toLowerCase().includes(search.toLowerCase())
   );
+
+  // ✅ FIX: loading must be INSIDE component
+  if (loading) {
+    return <p style={{ textAlign: "center" }}>Loading...</p>;
+  }
 
   return (
     <div style={containerStyle}>
@@ -145,7 +153,7 @@ function App() {
           }
         />
 
-        <button style={buttonStyle}>
+        <button type="submit" style={buttonStyle}>
           {editingId ? "Update ✏️" : "Save 🎉"}
         </button>
       </form>
@@ -182,20 +190,29 @@ function App() {
 }
 
 // ===== STYLES =====
-const containerStyle = { padding: 20, textAlign: "center" };
+const containerStyle = {
+  padding: 20,
+  textAlign: "center",
+  maxWidth: "100%",
+};
+
 const titleStyle = { color: "#333" };
+
 const cardStyle = {
   background: "white",
   padding: 20,
   margin: "10px auto",
   maxWidth: 400,
+  width: "90%", // 👈 mobile fix
   borderRadius: 10,
 };
+
 const inputStyle = {
   width: "100%",
   padding: 10,
   marginBottom: 10,
 };
+
 const buttonStyle = {
   width: "100%",
   padding: 10,
@@ -204,11 +221,14 @@ const buttonStyle = {
   border: "none",
   cursor: "pointer",
 };
+
 const userItemStyle = {
   borderBottom: "1px solid #eee",
   padding: 10,
 };
+
 const editBtn = { marginRight: 10 };
+
 const deleteBtn = {
   background: "red",
   color: "white",
