@@ -11,9 +11,12 @@ app.use(cors());
 app.use(express.json());
 
 // ================= MONGODB =================
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB connected ✅"))
-  .catch((err) => console.log("MongoDB error ❌", err));
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log("MongoDB connected ✅"))
+.catch((err) => console.log("MongoDB error ❌", err));
 
 // ================= MODEL =================
 const userSchema = new mongoose.Schema({
@@ -51,6 +54,10 @@ app.post("/users", async (req, res) => {
   try {
     const { username, email, dob } = req.body;
 
+    if (!username || !email || !dob) {
+      return res.status(400).json({ message: "All fields required" });
+    }
+
     const exists = await User.findOne({ email });
     if (exists) {
       return res.status(400).json({ message: "Email already exists" });
@@ -58,50 +65,51 @@ app.post("/users", async (req, res) => {
 
     await User.create({ username, email, dob });
 
-    res.json({ message: "User saved!" });
+    return res.json({ message: "User saved!" });
   } catch (err) {
-    res.status(500).json({ message: "Error saving user" });
+    return res.status(500).json({ message: "Error saving user" });
   }
 });
 
 // GET USERS
 app.get("/users", async (req, res) => {
-  const users = await User.find();
-  res.json(users);
+  try {
+    const users = await User.find();
+    return res.json(users);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
 });
 
-// ❌ REMOVE THIS OLD ROUTE (IMPORTANT)
-// app.put("/users/update", ...)
-
-// ✅ UPDATE SINGLE USER (FIXED EDIT SYSTEM)
+// UPDATE USER
 app.put("/users/:id", async (req, res) => {
   try {
     const { username, email, dob } = req.body;
 
-    await User.findByIdAndUpdate(req.params.id, {
-      username,
-      email,
-      dob,
-    });
+    await User.findByIdAndUpdate(
+      req.params.id,
+      { username, email, dob },
+      { new: true }
+    );
 
-    res.json({ message: "User updated" });
+    return res.json({ message: "User updated" });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
-// ✅ DELETE USER (FIXED)
+// DELETE USER
 app.delete("/users/:id", async (req, res) => {
   try {
     await User.findByIdAndDelete(req.params.id);
-    res.json({ message: "User deleted" });
+    return res.json({ message: "User deleted" });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
 // ================= CRON JOB =================
-cron.schedule("* * * * *", async () => {
+cron.schedule("0 0 * * *", async () => {
   console.log("Cron running...");
 
   const today = new Date();
@@ -136,7 +144,6 @@ cron.schedule("* * * * *", async () => {
             console.log("ERROR:", err);
           } else {
             console.log("Email sent:", info.response);
-
             user.lastSent = todayKey;
             await user.save();
           }
@@ -149,7 +156,7 @@ cron.schedule("* * * * *", async () => {
 // ================= SERVE FRONTEND =================
 app.use(express.static(path.join(__dirname, "frontend/dist")));
 
-app.get("/*", (req, res) => {
+app.use((req, res) => {
   res.sendFile(path.join(__dirname, "frontend/dist/index.html"));
 });
 
