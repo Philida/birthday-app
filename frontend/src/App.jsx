@@ -20,11 +20,16 @@ function App() {
       setLoading(true);
 
       const res = await fetch(API);
-      const data = await res.json();
 
+      if (!res.ok) {
+        throw new Error("Failed to fetch users");
+      }
+
+      const data = await res.json();
       setUsers(data);
     } catch (err) {
-      console.error(err);
+      console.error("Fetch error:", err);
+      setUsers([]); // fallback
     } finally {
       setLoading(false);
     }
@@ -54,7 +59,7 @@ function App() {
       }
 
       setEditingId(null);
-      await fetchUsers(); // 👈 wait before clearing form
+      await fetchUsers();
       setForm({ username: "", email: "", dob: "" });
     } catch (err) {
       console.error("Error saving user:", err);
@@ -68,7 +73,7 @@ function App() {
         method: "DELETE",
       });
 
-      fetchUsers();
+      await fetchUsers(); // 👈 important
     } catch (err) {
       console.error("Error deleting user:", err);
     }
@@ -101,14 +106,12 @@ function App() {
     u.username.toLowerCase().includes(search.toLowerCase())
   );
 
-  // ✅ FIX: loading must be INSIDE component
-  if (loading) {
-    return <p style={{ textAlign: "center" }}>Loading...</p>;
-  }
-
   return (
     <div style={containerStyle}>
       <h1 style={titleStyle}>🎉 Birthday Reminder</h1>
+
+      {/* LOADING (non-blocking) */}
+      {loading && <p>Loading...</p>}
 
       {/* SEARCH */}
       <input
@@ -203,7 +206,7 @@ const cardStyle = {
   padding: 20,
   margin: "10px auto",
   maxWidth: 400,
-  width: "90%", // 👈 mobile fix
+  width: "95%", // 👈 better mobile
   borderRadius: 10,
 };
 
