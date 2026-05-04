@@ -7,7 +7,11 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-app.use(cors());
+
+app.use(cors({
+  origin: "*",
+}));
+
 app.use(express.json());
 
 // ================= MONGODB =================
@@ -15,13 +19,17 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB connected ✅"))
   .catch((err) => console.log("MongoDB error ❌", err));
 
+mongoose.connection.on("error", (err) => {
+  console.log("MongoDB error ❌", err);
+});
+
 // ================= MODEL =================
 const userSchema = new mongoose.Schema({
   username: String,
   email: { type: String, unique: true },
   dob: String,
   lastSent: String,
-});
+}, { timestamps: true });
 
 const User = mongoose.model("User", userSchema);
 
@@ -83,6 +91,12 @@ app.put("/users/:id", async (req, res) => {
   try {
     const { username, email, dob } = req.body;
 
+    const existing = await User.findOne({ email });
+
+    if (existing && existing._id.toString() !== req.params.id) {
+      return res.status(400).json({ message: "Email already in use" });
+    }
+
     await User.findByIdAndUpdate(
       req.params.id,
       { username, email, dob },
@@ -107,47 +121,56 @@ app.delete("/users/:id", async (req, res) => {
 
 // ================= CRON JOB =================
 cron.schedule("0 0 * * *", async () => {
-  console.log("Cron running...");
+  try {
+    console.log("Cron running...");
 
-  const today = new Date();
-  const month = today.getMonth();
-  const date = today.getDate();
+    const today = new Date();
+    const month = today.getMonth();
+    const date = today.getDate();
 
-  const users = await User.find();
+    const users = await User.find();
 
-  for (let user of users) {
-    const dob = new Date(user.dob);
-    const todayKey = `${month}-${date}`;
+    for (let user of users) {
+      const dob = new Date(user.dob);
+      const todayKey = `${month}-${date}`;
 
-    if (dob.getMonth() === month && dob.getDate() === date) {
-      if (user.lastSent === todayKey) continue;
+      if (dob.getMonth() === month && dob.getDate() === date) {
+        if (user.lastSent === todayKey) continue;
 
-      console.log("Birthday match!");
+        console.log("Sending email to:", user.email);
 
-      transporter.sendMail(
-        {
-          from: process.env.EMAIL_USER,
-          to: user.email,
-          subject: "Happy Birthday 🎉",
-          html: `
-            <div style="font-family: Arial; text-align:center; padding:20px;">
-              <h1 style="color:#ff6b6b;">🎉 Happy Birthday, ${user.username}! 🎉</h1>
-              <p>Wishing you a wonderful day!</p>
-            </div>
-          `,
-        },
-        async (err, info) => {
-          if (err) {
-            console.log("ERROR:", err);
-          } else {
-            console.log("Email sent:", info.response);
-            user.lastSent = todayKey;
-            await user.save();
+        transporter.sendMail(
+          {
+            from: process.env.EMAIL_USER,
+            to: user.email,
+            subject: "Happy Birthday 🎉",
+            html: `
+              <div style="font-family: Arial; text-align:center; padding:20px;">
+                <h1 style="color:#ff6b6b;">🎉 Happy Birthday, ${user.username}! 🎉</h1>
+                <p>Wishing you a wonderful day!</p>
+              </div>
+            `,
+          },
+          async (err, info) => {
+            if (err) {
+              console.log("EMAIL ERROR:", err);
+            } else {
+              console.log("Email sent:", info.response);
+              user.lastSent = todayKey;
+              await user.save();
+            }
           }
-        }
-      );
+        );
+      }
     }
+  } catch (err) {
+    console.log("CRON ERROR:", err);
   }
+});
+
+// ================= HEALTH CHECK =================
+app.get("/health", (req, res) => {
+  res.send("OK");
 });
 
 // ================= SERVE FRONTEND =================
